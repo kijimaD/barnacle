@@ -1,4 +1,4 @@
-package main
+package barnacle
 
 import (
 	"io"
@@ -11,7 +11,9 @@ import (
 )
 
 func TestPrint(t *testing.T) {
-	mainHandler := initHandler()
+	mainHandler := InitHandler()
+	v := InitValidator()
+	mainHandler = v.Middleware(mainHandler)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mainHandler.ServeHTTP(w, r)
 	}))
