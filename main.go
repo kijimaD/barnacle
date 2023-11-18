@@ -52,6 +52,22 @@ paths:
                   result:
                     type: string
                 required: [result]
+  /not_impl:
+    get:
+      description: hello
+      responses:
+        '200':
+          description: hello
+          content:
+            "application/json":
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                  type:
+                    type: string
+                required: [result, type]
 `[1:]))
 	if err != nil {
 		panic(err)
@@ -105,6 +121,8 @@ paths:
 	mux := http.NewServeMux()
 	mux.HandleFunc("/square/", squareHandler)
 	mux.HandleFunc("/hello", helloHandler)
+	mux.HandleFunc("/not_found", helloHandler)
+	mux.HandleFunc("/not_impl", helloHandler)
 	// Now we can finally set the main server handler.
 	mainHandler = v.Middleware(mux)
 	return mainHandler
