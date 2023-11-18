@@ -39,7 +39,7 @@ paths:
                 type: object
                 properties:
                   result:
-                    type: string
+                    type: integer
                 required: [result]
   /hello:
     get:
@@ -62,7 +62,14 @@ paths:
 
 	squareHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		result := map[string]interface{}{"result": "square"}
+		result := map[string]interface{}{"result": 100}
+		if err = json.NewEncoder(w).Encode(&result); err != nil {
+			panic(err)
+		}
+	})
+	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		result := map[string]interface{}{"result": "hello"}
 		if err = json.NewEncoder(w).Encode(&result); err != nil {
 			panic(err)
 		}
@@ -72,6 +79,7 @@ paths:
 	var mainHandler http.Handler
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 先にhttptest.ServerのURLを確定させるため
+		// 外部から処理を注入できるようにする。変数mainHandlerに値を入れると、srvの動きが変わる
 		mainHandler.ServeHTTP(w, r)
 	}))
 	defer srv.Close()
@@ -96,8 +104,12 @@ paths:
 				"message": http.StatusText(status),
 			})
 		}))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/square/", squareHandler)
+	mux.HandleFunc("/hello", helloHandler)
 	// Now we can finally set the main server handler.
-	mainHandler = v.Middleware(squareHandler)
+	mainHandler = v.Middleware(mux)
 
 	printResp := func(resp *http.Response, err error) {
 		if err != nil {
@@ -112,6 +124,6 @@ paths:
 	}
 	// Valid requests to our sum service
 	printResp(srv.Client().Get(srv.URL + "/square/2"))
-	printResp(srv.Client().Get(srv.URL + "/hello")) // 処理はsquareHandler...
-	printResp(srv.Client().Get(srv.URL + "/"))      // error
+	printResp(srv.Client().Get(srv.URL + "/hello"))     // 処理はsquareHandler...
+	printResp(srv.Client().Get(srv.URL + "/not_found")) // error
 }
