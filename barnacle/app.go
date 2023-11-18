@@ -36,7 +36,33 @@ func InitHandler() http.Handler {
 }
 
 func InitValidator() *openapi3filter.Validator {
-	doc, err := openapi3.NewLoader().LoadFromData([]byte(`
+	doc, err := openapi3.NewLoader().LoadFromData([]byte(Docstr[1:]))
+	if err != nil {
+		panic(err)
+	}
+	if err := doc.Validate(context.Background()); err != nil { // Assert our OpenAPI is valid!
+		panic(err)
+	}
+	router, err := gorillamux.NewRouter(doc)
+	if err != nil {
+		panic(err)
+	}
+	v := openapi3filter.NewValidator(
+		router,
+		openapi3filter.Strict(true),
+		openapi3filter.OnErr(func(w http.ResponseWriter, status int, code openapi3filter.ErrCode, err error) {
+			// カスタムレスポンス
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(status)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  status,
+				"message": http.StatusText(status),
+			})
+		}))
+	return v
+}
+
+const Docstr = `
 openapi: 3.0.0
 info:
   title: 'Validator - square example'
@@ -90,28 +116,4 @@ paths:
                   type:
                     type: string
                 required: [type]
-`[1:]))
-	if err != nil {
-		panic(err)
-	}
-	if err := doc.Validate(context.Background()); err != nil { // Assert our OpenAPI is valid!
-		panic(err)
-	}
-	router, err := gorillamux.NewRouter(doc)
-	if err != nil {
-		panic(err)
-	}
-	v := openapi3filter.NewValidator(
-		router,
-		openapi3filter.Strict(true),
-		openapi3filter.OnErr(func(w http.ResponseWriter, status int, code openapi3filter.ErrCode, err error) {
-			// カスタムレスポンス
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(status)
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"status":  status,
-				"message": http.StatusText(status),
-			})
-		}))
-	return v
-}
+`
