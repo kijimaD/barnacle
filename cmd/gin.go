@@ -47,7 +47,9 @@ func initGin(ctx *cli.Context) error {
 	return nil
 }
 
-const APIResposeErrorCode = "API RESPONSE ERROR"
+const APIRequestErrorCode = "API_REQUEST_ERROR"
+const APIRequestErrorMsg = "リクエストがAPI仕様を満たしていない"
+const APIResposeErrorCode = "API_RESPONSE_ERROR"
 const APIResposeErrorMsg = "レスポンスがAPI仕様を満たしていない"
 
 func MyMiddleware() gin.HandlerFunc {
@@ -79,6 +81,11 @@ func MyMiddleware() gin.HandlerFunc {
 		}
 		if err = openapi3filter.ValidateRequest(c.Request.Context(), requestValidationInput); err != nil {
 			log.Println(err)
+			c.JSON(500, gin.H{
+				"code":    APIRequestErrorCode,
+				"msg":     APIRequestErrorMsg,
+				"content": err.Error(),
+			})
 			c.Abort()
 			return
 		}
@@ -95,11 +102,12 @@ func MyMiddleware() gin.HandlerFunc {
 			Options:                &openapi3filter.Options{},
 		}); err != nil {
 			log.Println(err)
+			// ステータスコードは500にしたいが、レスポンスを返した後なので反映されない
 			c.JSON(200, gin.H{
-				"code": APIResposeErrorCode,
-				"msg":  APIResposeErrorMsg,
+				"code":    APIResposeErrorCode,
+				"msg":     APIResposeErrorMsg,
+				"content": err.Error(),
 			})
-			c.String(200, "\n"+err.Error()) // ステータスコードは500にしたいが、反映されない
 			c.Abort()
 			return
 		}
