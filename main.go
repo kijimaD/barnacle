@@ -3,18 +3,15 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
 )
 
-func main() {
+func initHandler() http.Handler {
 	doc, err := openapi3.NewLoader().LoadFromData([]byte(`
 openapi: 3.0.0
 info:
@@ -86,7 +83,7 @@ paths:
 
 	// Patch the OpenAPI spec to match the httptest.Server.URL. Only needed
 	// because the server URL is dynamic here.
-	doc.Servers = []*openapi3.Server{{URL: srv.URL}}
+	doc.Servers = []*openapi3.Server{{URL: srv.URL}, {URL: "localhost:8080"}}
 	if err := doc.Validate(context.Background()); err != nil { // Assert our OpenAPI is valid!
 		panic(err)
 	}
@@ -110,20 +107,9 @@ paths:
 	mux.HandleFunc("/hello", helloHandler)
 	// Now we can finally set the main server handler.
 	mainHandler = v.Middleware(mux)
+	return mainHandler
+}
 
-	printResp := func(resp *http.Response, err error) {
-		if err != nil {
-			panic(err)
-		}
-		defer resp.Body.Close()
-		contents, err := io.ReadAll(resp.Body)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(resp.StatusCode, strings.TrimSpace(string(contents)))
-	}
-	// Valid requests to our sum service
-	printResp(srv.Client().Get(srv.URL + "/square/2"))
-	printResp(srv.Client().Get(srv.URL + "/hello"))     // 処理はsquareHandler...
-	printResp(srv.Client().Get(srv.URL + "/not_found")) // error
+func main() {
+	http.ListenAndServe(":8080", initHandler())
 }
