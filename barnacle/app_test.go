@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPrint(t *testing.T) {
+func TestValidator(t *testing.T) {
 	mainHandler := InitHandler()
 	v := InitValidator()
 	mainHandler = v.Middleware(mainHandler)

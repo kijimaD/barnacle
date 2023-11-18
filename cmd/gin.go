@@ -15,11 +15,13 @@ var CmdGin = &cli.Command{
 	Flags:       []cli.Flag{},
 }
 
+// FIXME: ミドルウェア入れたいだけなのに、ハンドラもセットされてるよな…
 func initGin(ctx *cli.Context) error {
 	r := gin.Default()
 	v := barnacle.InitValidator()
-	mainHandler := v.Middleware(barnacle.InitHandler())
-	r.Use(gin.WrapH(mainHandler))
+	handler := barnacle.InitHandler()
+	handler = v.Middleware(handler)
+	r.Use(gin.WrapH(handler))
 	r.Run()
 	return nil
 }

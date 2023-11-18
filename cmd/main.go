@@ -13,8 +13,8 @@ func NewApp() *cli.App {
 	app.EnableBashCompletion = true
 	app.DefaultCommand = CmdStd.Name
 	app.Commands = []*cli.Command{
-		CmdGin,
 		CmdStd,
+		CmdGin,
 	}
 	return app
 }

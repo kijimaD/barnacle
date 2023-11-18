@@ -101,7 +101,9 @@ paths:
 	if err != nil {
 		panic(err)
 	}
-	v := openapi3filter.NewValidator(router, openapi3filter.Strict(true),
+	v := openapi3filter.NewValidator(
+		router,
+		openapi3filter.Strict(true),
 		openapi3filter.OnErr(func(w http.ResponseWriter, status int, code openapi3filter.ErrCode, err error) {
 			// カスタムレスポンス
 			w.Header().Set("Content-Type", "application/json")
