@@ -8,6 +8,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
+	"github.com/gin-gonic/gin"
 )
 
 func initHandler() http.Handler {
@@ -114,6 +115,21 @@ paths:
 	return mainHandler
 }
 
-func main() {
+func initGin() {
+	r := gin.Default()
+	r.Use(gin.WrapH(initHandler()))
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
+	r.Run()
+}
+
+func initStandard() {
 	http.ListenAndServe(":8080", initHandler())
+}
+
+func main() {
+	initGin()
 }
