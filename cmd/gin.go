@@ -1,10 +1,11 @@
 package cmd
 
 import (
+	"barnacle/barnacle"
 	"bytes"
 	"context"
-	"fmt"
 	"io"
+	"log"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -24,8 +25,7 @@ var CmdGin = &cli.Command{
 // FIXME: ミドルウェア入れたいだけなのに、ハンドラもセットされてるよな…
 func initGin(ctx *cli.Context) error {
 	r := gin.Default()
-	myv := MyValidator{}
-	r.Use(myv.MyMiddleware())
+	r.Use(MyMiddleware())
 	r.GET("/square/:n", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"result": 100,
@@ -36,74 +36,22 @@ func initGin(ctx *cli.Context) error {
 			"result": "hello",
 		})
 	})
+	// API仕様を満たしていないレスポンス
 	r.GET("/not_impl", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"result": "hello",
 		})
 	})
-
 	r.Run()
+
 	return nil
 }
 
-type MyValidator struct{}
+const APIResposeErrorCode = "API RESPONSE ERROR"
+const APIResposeErrorMsg = "レスポンスがAPI仕様を満たしていない"
 
-func (v MyValidator) MyMiddleware() gin.HandlerFunc {
-	doc, err := openapi3.NewLoader().LoadFromData([]byte(`
-openapi: 3.0.0
-info:
-  title: 'Validator - square example'
-  version: '0.0.0'
-paths:
-  /square/{x}:
-    get:
-      description: square an integer
-      parameters:
-        - name: x
-          in: path
-          schema:
-            type: integer
-          required: true
-      responses:
-        '200':
-          description: squared integer response
-          content:
-            "application/json":
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: integer
-                required: [result]
-  /hello:
-    get:
-      description: hello
-      responses:
-        '200':
-          description: hello
-          content:
-            "application/json":
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: string
-                required: [result]
-  /not_impl:
-    get:
-      description: hello
-      responses:
-        '200':
-          description: hello
-          content:
-            "application/json":
-              schema:
-                type: object
-                properties:
-                  type:
-                    type: string
-                required: [type]
-`[1:]))
+func MyMiddleware() gin.HandlerFunc {
+	doc, err := openapi3.NewLoader().LoadFromData([]byte(barnacle.Docstr[1:]))
 	if err != nil {
 		panic(err)
 	}
@@ -130,14 +78,13 @@ paths:
 			Options:    &openapi3filter.Options{},
 		}
 		if err = openapi3filter.ValidateRequest(c.Request.Context(), requestValidationInput); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			c.Abort()
 			return
 		}
 
 		w := &responseBodyWriter{body: &bytes.Buffer{}, ResponseWriter: c.Writer}
-		c.Writer = w // 書かないと動かない
-
+		c.Writer = w
 		c.Next()
 
 		if err = openapi3filter.ValidateResponse(c.Request.Context(), &openapi3filter.ResponseValidationInput{
@@ -147,8 +94,12 @@ paths:
 			Body:                   io.NopCloser(w.body),
 			Options:                &openapi3filter.Options{},
 		}); err != nil {
-			fmt.Println(err)
-			c.Writer.Write([]byte(`"{error:レスポンスがAPI仕様を満たしていない}"`))
+			log.Println(err)
+			c.JSON(200, gin.H{
+				"code": APIResposeErrorCode,
+				"msg":  APIResposeErrorMsg,
+			})
+			c.String(200, "\n"+err.Error()) // ステータスコードは500にしたいが、反映されない
 			c.Abort()
 			return
 		}
