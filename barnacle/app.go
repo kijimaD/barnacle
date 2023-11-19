@@ -76,6 +76,8 @@ paths:
           in: path
           schema:
             type: integer
+            minimum: 1
+            maximum: 10000
           required: true
       responses:
         '200':
