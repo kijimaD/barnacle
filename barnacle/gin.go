@@ -17,18 +17,18 @@ const APIRequestErrorMsg = "リクエストがAPI仕様を満たしていない"
 const APIResposeErrorCode = "API_RESPONSE_ERROR"
 const APIResposeErrorMsg = "レスポンスがAPI仕様を満たしていない"
 
-func Middleware() gin.HandlerFunc {
+func MakeValidateMiddleware() (gin.HandlerFunc, error) {
 	doc, err := openapi3.NewLoader().LoadFromData([]byte(Docstr[1:]))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if err := doc.Validate(context.Background()); err != nil { // Assert our OpenAPI is valid!
-		panic(err)
+		return nil, err
 	}
 
 	router, err := gorillamux.NewRouter(doc)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return func(c *gin.Context) {
@@ -76,7 +76,7 @@ func Middleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-	}
+	}, nil
 }
 
 type responseBodyWriter struct {

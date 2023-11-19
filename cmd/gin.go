@@ -17,7 +17,12 @@ var CmdGin = &cli.Command{
 
 func initGin(ctx *cli.Context) error {
 	r := gin.Default()
-	r.Use(barnacle.Middleware())
+	if validator, err := barnacle.MakeValidateMiddleware(); err == nil {
+		r.Use(validator)
+	} else {
+		return err
+	}
+
 	r.GET("/square/:n", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"result": 100,
