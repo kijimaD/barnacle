@@ -22,6 +22,7 @@ func MakeValidateMiddleware() (gin.HandlerFunc, error) {
 	if err != nil {
 		return nil, err
 	}
+	doc.Servers = nil
 	if err := doc.Validate(context.Background()); err != nil { // Assert our OpenAPI is valid!
 		return nil, err
 	}
@@ -34,6 +35,12 @@ func MakeValidateMiddleware() (gin.HandlerFunc, error) {
 	return func(c *gin.Context) {
 		route, pathParams, err := router.FindRoute(c.Request)
 		if err != nil {
+			log.Println(err)
+			c.JSON(500, gin.H{
+				"code":    APIRequestErrorCode,
+				"msg":     APIRequestErrorMsg,
+				"content": err.Error(),
+			})
 			c.Abort()
 			return
 		}
